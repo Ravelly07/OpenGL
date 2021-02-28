@@ -1,163 +1,135 @@
-#include <GL/glew.h>
+/* This code uses Modern OpenGL to render geometry,
+and uses an abstraction of the VertexBuffer, VertexArray, and Shader.
+The code is based on The Cherno OpenGL tutorial in https ://youtube.com/playlist?list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2
+*/
+#include <GL/glew.h>       
 #include <GLFW/glfw3.h>
-#include<iostream>
 
-/* Create the Shader
-Un sder es un programa que ouede interpretar los datos del vertexbuffer*/
-static unsigned int CompileShader(unsigned int type, const std::string& source)
-{
-    unsigned int id = glCreateShader(type);//Crea el shader de acuerdo al tipo, (vertex, fragment)
-    const char* src = source.c_str();//apunta al inicio del array [0]
-    glShaderSource(id, 1, &src, nullptr);//Empieza a leer el programa 
-    glCompileShader(id);//Compila el shader 
+#include <iostream>
+#include <fstream>  
+#include <string>
+#include <sstream>
 
-    /*Error handling -- En caso de presentarse algun error, el programa recibe
-    un identificador, lo convierte a cadena y lo imprime en la consola,
-    posteriormente cierra el programa. */
-    int result;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-    if (result == GL_FALSE) {
-        int length;
-        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-        char* message = (char*)alloca(length * sizeof(char));
-        glGetShaderInfoLog(id, length, &length, message);
-        std::cout << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << "shader!" << std::endl;
-        std::cout << message << std::endl;
-        glDeleteShader(id); //borra el shader creado. 
-        return 0;
-    }
+#include "Renderer.h"
 
-    return id;
-}
-/*El vertexShader es texto que el programa recibe como un apuntador
-similar ocurre con el fragmentShader*/
-static int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
-{
-    unsigned int program = glCreateProgram();/*Crea un objeto para el shader llamado program*/
-    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);    //compilamos el texto del vertexShader
-    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);//compilamos el texto del fragmentShader
-
-    //Completamos el shader 'program'
-    glAttachShader(program, vs); //Concatenamos el vertexSheder al program
-    glAttachShader(program, fs);//Concatenamos el FragmentShader al program
-    glLinkProgram(program);//hace un link del programa necesario para completar el shader
-    glValidateProgram(program);//Validamos el programa
-
-    //borramos los datos almacenados en vs y fs, ya tenemos el shader creado.
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    return program;
-}
-/*end of create the shader*/
+#include "VertexBuffer.h"
+#include "VertexBufferLayout.h"
+#include "IndexBuffer.h"
+#include "VertexArray.h"
+#include "Shader.h"
+#include "Texture.h"
 
 int main(void)
 {
-    GLFWwindow* window; //Window es un objeto de tipo GLFwindow
+    GLFWwindow* window;
 
     /* Initialize the library */
-    if (!glfwInit()) //inicia la bilioteca, en caso de no estar inicialiado correctamente el programa se cerrará
+    if (!glfwInit())
         return -1;
 
-    /* Creamos una ventana en el contexto OGL de 640 * 480, con el nombre ‘Mi primer triángulo’ */
-    window = glfwCreateWindow(640, 480, "Mi primer triangulo", NULL, NULL);
-    //Si por alguna razón no se crea correctamente la ventana, se cierra el GLFW creado y termina el programa
-    if (!window){
+    // to create the vertex array
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+
+    /* Create a windowed mode window and its OpenGL context */
+    window = glfwCreateWindow(640, 480, "Rendering a square", NULL, NULL);
+    if (!window)
+    {
         glfwTerminate();
         return -1;
     }
 
-    /* Se genera el contexto del objeto para poder utilizarlo*/
+    /* Make the window's context current */
     glfwMakeContextCurrent(window);
-    
-        //---La segunda libreria se utiliza despues de crear el contexto anterior
-        /*inicializamos glew, al igual que con glfw3, si sucede
-        algun conflicto, pasará un reporte de este a la consola y cerrará el programa. */
-    if (glewInit() != GLEW_OK) {
-        std::cout << "Error in Glew" << std::endl;
-        exit(1);
-    }
-        //Imprime la versión de OGL con la que estamos trabajando
+
+    glfwSwapInterval(1);  //to synchronize the animation
+
+    if (glewInit() != GLEW_OK)
+        std::cout << "Error!" << std::endl;
+
     std::cout << glGetString(GL_VERSION) << std::endl;
-        
-        //Creamos el buffer
-        //Reacemos el triangulo --Datos del VertexBuffer
-    float position[6] = { -0.5f,-0.5f, 
-                            0.0f, 0.5f, 
-                            0.5f, -0.5 };
-    unsigned int buffer; //creamos el identificador para el bufer
-    glGenBuffers(1, &buffer); // Generamos el buffer
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);//Conectamos el buffer 
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), position, GL_STATIC_DRAW);/*Cargamos los 6 datos al buffer 
-                                                                               pero debe ser en bytes. */
-
-        //Apuntador a los atributos
-    glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE, 2 *sizeof(float),0);//Toma 2 valores por vertice. 
-    glEnableVertexAttribArray(0);
-        
-    /*Podemos pasar al DRAW CALL en el loop
-    sin embargo a o continuación veremos otros atributos
-    que nos permiran manipular más nuestros shaders*/
-
-    /*The vertex Shader and fragment shader programs*/
-    //lenguaje glsl
-    /*Crea la cadena para el vertexShader (crea los vertices):
-    indicamos la versión del lenguaje, indica a partir
-    de que dato en el array empieza a leer,
-    inicia el programa principal para el vs, 
-    por ultimo mandamos las posiciones*/
-    std::string vertexShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) in vec4 position;"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   gl_Position = position;\n"
-        "}\n";
-    /*Crea la cadena para el fragmentShader (pinta los pixeles): 
-    indicamos la versión del lenguaje,
-    inicia el programa principal para el fs,
-    mandamos el color*/
-    std::string fragmentShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) out vec4 color;"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   color = vec4(0.0, 1.0, 1.0, 1.0);\n"//RGBa
-        "}\n";
-    
-    /*llamamos a la función CreateShader enviando como parametros
-    los programas del vertexShader y fragmentShader
-    el cual retorna el objeto del shader tipo program*/
-    unsigned int shader = CreateShader(vertexShader, fragmentShader);
-    glUseProgram(shader);
-
-    /*the end of  vertex Shader and fragment shader programs*/
-
-    /* Loop que se ejecuta siempre que el programa este corriendo, 
-    aquí ocurre todo lo que visualizamos en la pantalla. */
-    while (!glfwWindowShouldClose(window))
     {
-        /* Render here */
-        glClear(GL_COLOR_BUFFER_BIT);
+        // include the texture positions to be mapped
+        float positions[] = {
+            -0.5f, -0.5f, 0.f, 0.f,      // 0 the bottom left
+             0.5f, -0.5f, 1.f, 0.f,      // 1 the bottom right side
+             0.5f,  0.5f, 1.f, 1.f,      // 1 the top right
+            -0.5f,  0.5f, 0.f, 1.f,      // 2 the top left
+        };
 
-        //DRAW CALL
-            //hasta aqui sabe que tiene un buffer con datos que pertenecen aun triangulo
-            //ahora le decimos como lo hará
-        glDrawArrays(GL_TRIANGLES, 0, 3);/*1-Que hará,
-                                         2-de donde empieza en el array,
-                                         3-cuantos valores necesita*/
+        unsigned int indices[] = {
+            0, 1, 2,
+            2, 3, 0
+        };
 
-        /* Swap front and back buffers */
-        glfwSwapBuffers(window);
+        //defining how openGL is going to blend alpha
+        GLCall(glEnable(GL_BLEND));
+        GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));  //src alpha = 0; dest = 1 - 0 = 0
 
-        /* Poll for and process events */
-        glfwPollEvents();
+
+
+        VertexArray va;
+        VertexBuffer vb(positions, 4 * 4 * sizeof(float)); // expand the buffer to 4 elements per vertex
+
+        VertexBufferLayout layout;
+        layout.Push<float>(2);
+        layout.Push<float>(2);  // adding to more attributes
+        va.AddBuffer(vb, layout);
+
+        IndexBuffer ib(indices, 6);
+
+        Shader shader("res/shaders/Basic.shader");
+        shader.Bind();
+        shader.SetUniform4f("u_Color", 0.2f, 0.3f, 0.8f, 1.0f);
+
+        Texture texture("res/textures/texture1.png");
+        texture.Bind();
+        shader.SetUniform1i("u_Texture", 0);  //the slot is 0
+
+
+        va.Unbind();
+        vb.Unbind();    //GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+        ib.Unbind();    //GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+        shader.UnBind();  //GLCall(glUseProgram(0));
+
+        Renderer renderer;
+
+        // to create the animation that change the color 
+        float r = 0.0f;
+        float increment = 0.05f;
+
+        /* Loop until the user closes the window */
+        while (!glfwWindowShouldClose(window))
+        {
+            /* Render here */
+            renderer.Clear();  //GLCall(glClear(GL_COLOR_BUFFER_BIT));
+
+            // use the shader and bind the buffer and ibo each time in case that the buffer change
+            shader.Bind();   //GLCall(glUseProgram(shader));
+            shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);   //GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+
+            renderer.Draw(va, ib, shader);
+
+            GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+
+            //part of the animation
+            if (r > 1.0f)
+                increment = -0.05f;
+            else if (r < 0.0f)
+                increment = 0.05f;
+
+            r += increment;
+
+            /* Swap front and back buffers */
+            glfwSwapBuffers(window);
+
+            /* Poll for and process events */
+            glfwPollEvents();
+        }
+
     }
-
     glfwTerminate();
     return 0;
 }
