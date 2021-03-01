@@ -1,3 +1,4 @@
+/*Shader.cpp*/
 #include "Shader.h"
 
 #include <iostream>
@@ -6,19 +7,19 @@
 #include <sstream>
 
 #include "Renderer.h"
-
+//se crea el objeto de tipo shader
 Shader::Shader(const std::string& filepath)
     : m_FilePath(filepath), m_RendererID(0)
 {
     ShaderProgramSource source = ParseShader(filepath);
     m_RendererID = CreateShader(source.VertexSource, source.FragmentSource);
 }
-
+//Se elimina el shader (normalmente s eusa tras la compilaci�n)
 Shader::~Shader()
 {
     GLCall(glDeleteProgram(m_RendererID));
 }
-
+/*Ajuste usado para emplear basic.shader*/
 ShaderProgramSource Shader::ParseShader(const std::string& filepath)
 {
     std::ifstream stream(filepath);  //open the file
@@ -52,12 +53,14 @@ ShaderProgramSource Shader::ParseShader(const std::string& filepath)
 
 unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
 {
-    unsigned int id = glCreateShader(type);
-    const char* src = source.c_str(); //pointer to the begining of the array as source[0]
-    glShaderSource(id, 1, &src, nullptr);
-    glCompileShader(id);
+    unsigned int id = glCreateShader(type);//Crea el shader de acuerdo al tipo, (vertex, fragment)
+    const char* src = source.c_str();//apunta al inicio del array [0]
+    glShaderSource(id, 1, &src, nullptr);//Empieza a leer el programa 
+    glCompileShader(id);//Compila el shader
 
-    //Error handling
+    /*Error handling -- En caso de presentarse algun error, el programa recibe
+    un identificador, lo convierte a cadena y lo imprime en la consola,
+    posteriormente cierra el programa. */
     int result;
     glGetShaderiv(id, GL_COMPILE_STATUS, &result);
     if (result == GL_FALSE)
@@ -74,21 +77,23 @@ unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
 
     return id;
 }
-
+//creamos el shader del programa, tras compilar los objetos tipo shader y concatenarlos en un Shader 
 unsigned int Shader::CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
     unsigned int program = glCreateProgram();  //create the object for the shader
                                                // and go to Compile Shader function
                                                // and back here
-    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
+    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);    //compilamos el texto del vertexShader
+    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);//compilamos el texto del fragmentShader
 
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
-    glValidateProgram(program);
+    //Completamos el shader 'program'
+    glAttachShader(program, vs); //Concatenamos el vertexSheder al program
+    glAttachShader(program, fs);//Concatenamos el FragmentShader al program
+    glLinkProgram(program);//hace un link del programa necesario para completar el shader
+    glValidateProgram(program);//Validamos el programa
 
-    glDeleteShader(vs);  //to detach the intermediates
+    //borramos los datos almacenados en vs y fs, ya tenemos el shader creado.
+    glDeleteShader(vs);  
     glDeleteShader(fs);
 
     return program;

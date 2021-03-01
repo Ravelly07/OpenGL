@@ -11,6 +11,6 @@ public:
 
 	void Bind() const;
 	void Unbind() const;
-
+	//getCount nos da el numero de elementos en el buffer
 	inline unsigned int GetCount() const { return m_Count; }
 };
