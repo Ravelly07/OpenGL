@@ -24,14 +24,14 @@ bool GLLogCall(const char* function, const char* file, int line)
 void Renderer::Clear() const
 {
     GLCall(glClear(GL_COLOR_BUFFER_BIT));
+    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT););
 }
 //link the objets and call the draw element fuction
-void Renderer::Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader) const
+void Renderer::Draw(const VertexArray& va, const Shader& shader) const
 {
     shader.Bind();
     va.Bind();
-    ib.Bind();
-    GLCall(glDrawElements(GL_TRIANGLES, ib.GetCount(), GL_UNSIGNED_INT, nullptr));/*Se indica que se va a dibujar
+    GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));/*Se indica que se va a dibujar
                                                                                cuantos indices hay en el 
                                                                                IndexBuffer, el tipo de atributo
                                                                                que este es, y por ultimo y dado a que
