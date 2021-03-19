@@ -19,8 +19,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 640;
+const unsigned int SCR_HEIGHT = 480;
 
 int main(void)
 {
@@ -40,7 +40,7 @@ int main(void)
 
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "pruebas", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Hollow Cube", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -57,14 +57,21 @@ int main(void)
     algun conflicto, pasar� un reporte de este a la consola y cerrar� el programa. */
     if (glewInit() != GLEW_OK)
         std::cout << "Error!" << std::endl;
-    //Imprime la versi�n de OGL con la que estamos trabajando
+   
+    /*Inicializamos el buffer de profundidad 
+    el cual se encarga de realizar automaticamente 
+    la prueba de profundidad */
     glEnable(GL_DEPTH_TEST);
+    //Imprime la versi�n de OGL con la que estamos trabajando
     std::cout << glGetString(GL_VERSION) << std::endl;
 
     {
-        // include the texture positions to be mapped
+        /*Declaramos la posicion inicial del cubo, 
+        así como el mapeado de la posición de la textura
+        respecto a la figura*/
         float positions[] = {
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,//0
+        /* x        y       z*//*x      y*/
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,//0
          0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,//1
          0.5f,  0.5f, -0.5f,  1.0f, 1.0f,//1
@@ -121,12 +128,13 @@ int main(void)
         VertexBuffer vb(positions, sizeof(positions)); // expand the buffer to 4 elements per vertex
         //Se crea objeto de tipo VertexBufferLayout
         VertexBufferLayout layout;
-        layout.Push<float>(3); //coordenadas
-        layout.Push<float>(2);  // textura corrdenadas
+        layout.Push<float>(3); //coordenadas <3: x,y,z>
+        layout.Push<float>(2);  // textura corrdenadas <2: x, y>
         va.AddBuffer(vb, layout);
         
         /*
-        //Se crea objeto de tipo IndeyBuffer
+        Apesar de poder realizarlo, por practicidad y tiempo 
+        en esta ocación 
         IndexBuffer ib(indices, 6);
         */
 
@@ -138,72 +146,74 @@ int main(void)
         Texture texture("res/textures/texture6.jpg");//Se obtienen los la textura qeu se utilizar�
         texture.Bind(0);
         shader.SetUniform1i("u_Texture", 0);  //the slot is 0
-        /*
-        Texture texture1("res/textures/texture7.png");//Se obtienen los la textura qeu se utilizar�
-        texture1.Bind(1);
-        shader.SetUniform1i("u_Texture", 1);  //the slot is 1
-        */
-
+       
         /*Eliminamos los viculos de los objetos*/
         va.Unbind();    //glBindVertexArray(0)
         vb.Unbind();    //GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-        //ib.Unbind();    //GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+        //ib.Unbind();    //No se esta utilizando este objeto
         shader.UnBind();  //GLCall(glUseProgram(0));
 
         //Se crea un objeto de tipo renderer para poder 
         Renderer renderer;
 
-        // to create the animation that change the color 
-        
+        /*Se declaran las variables que seran de ayuda para
+        la animación del cambio de color y posición*/
         float r = 0.0f;
+        float x = 0.0f;
         float increment = 0.05f;
+        float incrementx = 0.0f;
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
             /* Render here */
-            renderer.Clear();  //GLCall(glClear(GL_COLOR_BUFFER_BIT));
+            renderer.Clear();  /*Llamamos a una función que fue modificada de la clase
+                               Render*/
 
 
-            // create transformations
+            // Creamos las transformaciones
             glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
             glm::mat4 view = glm::mat4(1.0f);
             glm::mat4 projection = glm::mat4(1.0f);
 
-            model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-            view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+            model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));//Rotamos el modelo creado
+            model = glm::translate(model, glm::vec3(x, 0.0, 0.8f));//Movemos el modelo por la ventana
+            view = glm::translate(view, glm::vec3(0.0f, 0.0f, -4.0f));/*Agregamos el punto de visualización
+                                                                      El cubo se visualiza en torno al centro de 
+                                                                      la ventana, a una distancia de 4*/
+            /*Permine la proyección del cubo*/
             projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 mvp = projection * view * model;
-            //model = glm::translate(model, glm::vec3(0.0f, 0.0f, -3.0f));
+            glm::mat4 mvp = projection * view * model;//implementa el movimiento de las figuras
              
-            // use the shader and bind the buffer and ibo each time in case that the buffer change
+            // use the shader and bind the buffer  each time in case that the buffer change
             shader.Bind();   //GLCall(glUseProgram(shader));
-            shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);   //GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+            shader.SetUniform4f("u_Color", r, 0.7f, 1.0f, 1.0f);   //GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
             //Se dibuja en la ventana a travez de un metodo de la clase Renderer. 
-            
+           
+            shader.SetMat4("u_MVP", mvp);//Envia los datos para generar las transformaciones en el shader
 
-            shader.SetMat4("u_MVP", mvp);
-
-            renderer.Draw(va, shader);
-            /*GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));/*Esta funci�n se ejecuta en 
-                                                                                el m�todo render.draw*/
+            renderer.Draw(va, shader); //LLama a la función que dibuja nuestros elementos en la ventana --Eliminamos ib
         
-            //part of the animation
-            if (r > 1.0f)
-                increment = -0.05f;
-            else if (r < 0.0f)
-                increment = 0.05f;
-
+            /*Parte de la animación, cambio de color 
+            e incrementos en la posición x para generar un
+            desplazamiento no uniforme */
+            if (r > 1.0f){
+                increment = -0.02f;
+                incrementx = -0.02;
+            }
+            else if (r < 0.0f) {
+                increment = 0.02f;
+                incrementx = 0.02f;
+            }
             r += increment;
-    
-
+            x += incrementx;
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
 
             /* Poll for and process events */
             glfwPollEvents();
         }
-
     }
     glfwTerminate();
     return 0;

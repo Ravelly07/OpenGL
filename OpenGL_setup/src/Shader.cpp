@@ -127,8 +127,8 @@ void Shader::SetUniform4f(const std::string& name, float v0, float v1, float v2,
 }
 
 void Shader::SetMat4(const std::string& name, const glm::mat4& mat)
-{
-    glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &mat[0][0]);//glGetUniformLocation(m_RendererID, name.c_str()), 1, GL_FALSE, &mat[0][0]
+{//Agregamos una nueva función que nos permite trabajar las transformaciones en nuestros objetos
+    glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
 }
 
 int Shader::GetUniformLocation(const std::string& name)

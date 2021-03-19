@@ -23,18 +23,14 @@ bool GLLogCall(const char* function, const char* file, int line)
 
 void Renderer::Clear() const
 {
-    GLCall(glClear(GL_COLOR_BUFFER_BIT));
-    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT););
+    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));/*Limpiamos el bufer de color 
+                                                               y el de profundidad -- Agregado*/
+    GLCall(glClearColor(0.3f, 0.3f, 0.3f, 1.0f));//Aplicamos un color al bg -- Agregado
 }
 //link the objets and call the draw element fuction
-void Renderer::Draw(const VertexArray& va, const Shader& shader) const
-{
+void Renderer::Draw(const VertexArray& va, const Shader& shader) const 
+{/*En esta función eliminamos la sulicitud d eun index buffer, pues no se esta utilizando*/
     shader.Bind();
     va.Bind();
-    GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));/*Se indica que se va a dibujar
-                                                                               cuantos indices hay en el 
-                                                                               IndexBuffer, el tipo de atributo
-                                                                               que este es, y por ultimo y dado a que
-                                                                               el puntero ya fue definido
-                                                                               el cuarto parametro en un valor vacio*/
+    GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));/*Dibujamos el array de posiciones*/
 }
